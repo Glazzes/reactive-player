@@ -1,1 +1,1 @@
-rootProject.name = "rxplayer"
+rootProject.name = "Reactive player"

@@ -7,7 +7,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 
-@Component
 class SecurityUserDetailsService(private val userRepository: UserRepository): ReactiveUserDetailsService {
 
     override fun findByUsername(username: String): Mono<UserDetails> {

@@ -21,7 +21,7 @@ class WebSecurityConfiguration {
         http.authorizeExchange {
             it.pathMatchers("/user/**").permitAll()
                 .anyExchange().authenticated()
-        }
+            }
             .cors {
                 it.configurationSource {
                     val configuration = CorsConfiguration()
@@ -35,10 +35,19 @@ class WebSecurityConfiguration {
             }
             .csrf { it.disable() }
 
-        http.formLogin()
-        http.httpBasic { it.disable() }
+        http.httpBasic()
 
         return http.build()
+    }
+
+    @Bean
+    fun userDetailsService(): ReactiveUserDetailsService{
+        val user = User.withUsername("glaze")
+            .password(passwordEncoder().encode("pass"))
+            .authorities("rw")
+            .build()
+
+        return MapReactiveUserDetailsService(user)
     }
 
     @Bean

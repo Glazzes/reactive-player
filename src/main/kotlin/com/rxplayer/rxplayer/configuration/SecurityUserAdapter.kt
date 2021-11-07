@@ -12,6 +12,10 @@ class SecurityUserAdapter(private val user: User): UserDetails {
         )
     }
 
+    fun getId(): String{
+        return user.id ?: throw IllegalStateException("Id must not be null")
+    }
+
     override fun getPassword(): String {
         return user.password
     }
