@@ -16,4 +16,11 @@ class UserRequestHandler(private val userService: UserService){
         }
     }
 
+    @Bean(name = ["user-mono-router"])
+    fun monoRouter() = router {
+        "/user".nest {
+            GET("/{id}") { userService.findById(it) }
+        }
+    }
+
 }

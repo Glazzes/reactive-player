@@ -2,6 +2,7 @@ package com.rxplayer.rxplayer.service
 
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.CreatedUserDTO
+import com.rxplayer.rxplayer.dto.output.FindUserDTO
 import com.rxplayer.rxplayer.entities.User
 import com.rxplayer.rxplayer.repositories.UserRepository
 import kotlinx.coroutines.reactive.asFlow
@@ -33,6 +34,14 @@ class UserService(
 
         return ServerResponse.status(HttpStatus.CREATED)
             .bodyAndAwait(createdUser.asFlow())
+    }
+
+    fun findById(serverRequest: ServerRequest): Mono<ServerResponse> {
+        val id = serverRequest.pathVariable("id")
+        return userRepository.findById(id)
+            .map { FindUserDTO(it.id, it.username, it.nickName, it.profilePicture) }
+            .flatMap { ServerResponse.ok().bodyValue(it) }
+            .switchIfEmpty(ServerResponse.notFound().build())
     }
 
 }

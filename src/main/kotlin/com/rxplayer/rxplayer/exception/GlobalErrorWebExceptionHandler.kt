@@ -24,7 +24,7 @@ class GlobalErrorWebExceptionHandler(
     }
 
     override fun getRoutingFunction(errorAttributes: ErrorAttributes?): RouterFunction<ServerResponse> = coRouter {
-        DELETE("/song/**") {handleNotFoundException(it)}
+        DELETE("/song/*") {handleNotFoundException(it)}
     }
 
     private suspend fun handleNotFoundException(serverRequest: ServerRequest): ServerResponse{
