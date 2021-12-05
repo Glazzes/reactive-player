@@ -1,0 +1,13 @@
+# Create a new song, requires authentication
+POST localhost:8080/song
+Content-Type: application/json
+Authorization: Basic cmVhY3RpdmUtdXNlcjpzZWN1cmU
+
+{
+  "title": "Superhero"
+}
+
+###
+
+# Find a give song by it's id, run the previous command and replace the id
+GET localhost:8080/song/61ac128c91df3f1f35730083

@@ -25,15 +25,19 @@ class GlobalErrorWebExceptionHandler(
 
     override fun getRoutingFunction(errorAttributes: ErrorAttributes?): RouterFunction<ServerResponse> = coRouter {
         DELETE("/song/*") {handleNotFoundException(it)}
+        GET("/user/*") { handleNotFoundException(it) }
     }
 
     private suspend fun handleNotFoundException(serverRequest: ServerRequest): ServerResponse{
-        val errors = getErrorAttributes(serverRequest, ErrorAttributeOptions.defaults())
-        errors["message"] = "Could not delete song because it does not exists"
-        errors["url"] = errors["path"]
+        val errors = getErrorAttributes(
+            serverRequest,
+            ErrorAttributeOptions.of(
+                ErrorAttributeOptions.Include.BINDING_ERRORS,
+                ErrorAttributeOptions.Include.MESSAGE
+            )
+        )
         errors["status"] = 404
-
-        mutableListOf("error", "requestId", "path").forEach { errors.remove(it) }
+        mutableListOf("error", "requestId").forEach { errors.remove(it) }
 
         return ServerResponse.status(HttpStatus.NOT_FOUND)
             .bodyValueAndAwait(errors)

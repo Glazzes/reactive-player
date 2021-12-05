@@ -8,15 +8,14 @@ import com.rxplayer.rxplayer.entities.Song
 import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.SongRepository
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.bodyAndAwait
-import org.springframework.web.reactive.function.server.buildAndAwait
+import org.springframework.web.reactive.function.server.bodyValueAndAwait
 import reactor.core.publisher.Mono
-import reactor.core.publisher.SynchronousSink
 
 @Component
 class SongService(private val songRepository: SongRepository){
@@ -28,14 +27,23 @@ class SongService(private val songRepository: SongRepository){
             .map { CreatedSongDTO(it.id, it.title) }
 
         return ServerResponse.status(HttpStatus.CREATED)
-            .bodyAndAwait(songRequest.asFlow())
+            .bodyValueAndAwait(songRequest.awaitSingle())
     }
 
-    fun findById(serverRequest: ServerRequest): Mono<ServerResponse> {
-        return songRepository.findById(serverRequest.pathVariable("id"))
+    /*
+    Something replacing switchIfEmpty() with switchIfEmpty causes the compiler to not know
+    what the fuck is going so i am
+     */
+    suspend fun findById(serverRequest: ServerRequest): ServerResponse {
+        val songId = serverRequest.pathVariable("id")
+        val song = songRepository.findById(songId)
             .map { FindSongDTO(it.id, it.title) }
-            .flatMap { ServerResponse.ok().bodyValue(it) }
-            .switchIfEmpty(ServerResponse.notFound().build())
+            .switchIfEmpty(
+                Mono.error(NotFoundException("Song with id $songId was not found."))
+            )
+
+        return ServerResponse.ok()
+            .bodyValueAndAwait(song.awaitSingle())
     }
 
     suspend fun deleteById(serverRequest: ServerRequest): ServerResponse {

@@ -13,12 +13,7 @@ class UserRequestHandler(private val userService: UserService){
     fun coroutineRouter() = coRouter {
         "/user".nest {
             POST("") { userService.save(it) }
-        }
-    }
-
-    @Bean(name = ["user-mono-router"])
-    fun monoRouter() = router {
-        "/user".nest {
+            GET("") { userService.getAuthenticatedUser(it) }
             GET("/{id}") { userService.findById(it) }
         }
     }
