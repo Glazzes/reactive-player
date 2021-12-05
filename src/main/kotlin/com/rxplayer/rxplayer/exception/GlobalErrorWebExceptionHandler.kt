@@ -23,23 +23,31 @@ class GlobalErrorWebExceptionHandler(
         super.setMessageWriters(configurer.writers)
     }
 
+    private val defaultAttributes = ErrorAttributeOptions.of(
+            ErrorAttributeOptions.Include.BINDING_ERRORS,
+            ErrorAttributeOptions.Include.MESSAGE)
+
     override fun getRoutingFunction(errorAttributes: ErrorAttributes?): RouterFunction<ServerResponse> = coRouter {
         DELETE("/song/*") {handleNotFoundException(it)}
         GET("/user/*") { handleNotFoundException(it) }
+        POST("/user") { handleResourceAlreadyExistsException(it) }
     }
 
     private suspend fun handleNotFoundException(serverRequest: ServerRequest): ServerResponse{
-        val errors = getErrorAttributes(
-            serverRequest,
-            ErrorAttributeOptions.of(
-                ErrorAttributeOptions.Include.BINDING_ERRORS,
-                ErrorAttributeOptions.Include.MESSAGE
-            )
-        )
-        errors["status"] = 404
+        val errors = getErrorAttributes(serverRequest, defaultAttributes)
+        errors["status"] = HttpStatus.CONFLICT.value()
         mutableListOf("error", "requestId").forEach { errors.remove(it) }
 
         return ServerResponse.status(HttpStatus.NOT_FOUND)
+            .bodyValueAndAwait(errors)
+    }
+
+    private suspend fun handleResourceAlreadyExistsException(serverRequest: ServerRequest): ServerResponse {
+        val errors = getErrorAttributes(serverRequest, defaultAttributes)
+        errors["status"] = HttpStatus.CONFLICT.value()
+        mutableListOf("error", "requestId").forEach { errors.remove(it) }
+
+        return ServerResponse.status(HttpStatus.CONFLICT)
             .bodyValueAndAwait(errors)
     }
 }

@@ -1,17 +1,17 @@
-package com.rxplayer.rxplayer.requesthandlers
+package com.rxplayer.rxplayer.routes
 
-import com.rxplayer.rxplayer.service.PlayListService
+import com.rxplayer.rxplayer.handlers.PlayListHandler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.reactive.function.server.coRouter
 
 @Configuration
-class PlayListRequestHandler(private val playListService: PlayListService) {
+class PlayListRouter(private val playListHandler: PlayListHandler) {
 
     @Bean(name = ["playlist-co-router"])
     fun coroutineRouter() = coRouter {
         "/playlist".nest {
-            POST("") { playListService.save(it) }
+            POST("") { playListHandler.save(it) }
         }
     }
 

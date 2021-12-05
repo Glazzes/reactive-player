@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.service
+package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.input.PlayListRequest
 import com.rxplayer.rxplayer.dto.output.CreatedPlayListDTO
@@ -13,7 +13,7 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.bodyAndAwait
 
 @Service
-class PlayListService(private val playListRepository: PlayListRepository) {
+class PlayListHandler(private val playListRepository: PlayListRepository) {
 
     suspend fun save(serverRequest: ServerRequest): ServerResponse {
         val reactive = serverRequest.bodyToMono(PlayListRequest::class.java)

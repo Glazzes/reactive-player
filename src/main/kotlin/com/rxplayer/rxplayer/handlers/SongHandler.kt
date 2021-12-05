@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.service
+package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.input.SongRequest
 import com.rxplayer.rxplayer.dto.output.CreatedSongDTO
@@ -18,7 +18,7 @@ import org.springframework.web.reactive.function.server.bodyValueAndAwait
 import reactor.core.publisher.Mono
 
 @Component
-class SongService(private val songRepository: SongRepository){
+class SongHandler(private val songRepository: SongRepository){
 
     suspend fun save(serverRequest: ServerRequest): ServerResponse {
         val songRequest = serverRequest.bodyToMono(SongRequest::class.java)
@@ -31,7 +31,7 @@ class SongService(private val songRepository: SongRepository){
     }
 
     /*
-    Something replacing switchIfEmpty() with switchIfEmpty causes the compiler to not know
+    Something replacing switchIfEmpty() with switchIfEmpty{  } causes the compiler to not know
     what the fuck is going so i am
      */
     suspend fun findById(serverRequest: ServerRequest): ServerResponse {
@@ -49,16 +49,14 @@ class SongService(private val songRepository: SongRepository){
     suspend fun deleteById(serverRequest: ServerRequest): ServerResponse {
         val songId = serverRequest.pathVariable("id")
         val request = songRepository.existsById(songId)
-            .flatMap {
-                if(!it) {
-                    return@flatMap Mono.error(NotFoundException("Song with id $songId does not exists"))
-                }
-
-                songRepository.deleteById(songId)
+            .handle <Boolean>{ exists, sink ->
+                if(exists) sink.error(NotFoundException("Song with id $songId does not exists"))
+                sink.next(exists)
             }
+            .flatMap { songRepository.deleteById(songId) }
 
         return ServerResponse.status(HttpStatus.NO_CONTENT)
-            .bodyAndAwait(request.asFlow())
+            .bodyValueAndAwait(request.awaitSingle())
     }
 
 }
