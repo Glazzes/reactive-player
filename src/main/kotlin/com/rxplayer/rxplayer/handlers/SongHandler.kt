@@ -8,14 +8,17 @@ import com.rxplayer.rxplayer.entities.Song
 import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.SongRepository
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.http.HttpStatus
+import org.springframework.http.codec.multipart.FilePart
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.server.ServerRequest
-import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.bodyAndAwait
-import org.springframework.web.reactive.function.server.bodyValueAndAwait
+import org.springframework.web.reactive.function.server.*
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.switchIfEmpty
+import java.nio.charset.Charset
+import java.nio.file.Paths
 
 @Component
 class SongHandler(private val songRepository: SongRepository){
@@ -38,9 +41,7 @@ class SongHandler(private val songRepository: SongRepository){
         val songId = serverRequest.pathVariable("id")
         val song = songRepository.findById(songId)
             .map { FindSongDTO(it.id, it.title) }
-            .switchIfEmpty(
-                Mono.error(NotFoundException("Song with id $songId was not found."))
-            )
+            .switchIfEmpty { Mono.error(NotFoundException("Song with id $songId does not exists")) }
 
         return ServerResponse.ok()
             .bodyValueAndAwait(song.awaitSingle())
@@ -57,6 +58,30 @@ class SongHandler(private val songRepository: SongRepository){
 
         return ServerResponse.status(HttpStatus.NO_CONTENT)
             .bodyValueAndAwait(request.awaitSingle())
+    }
+
+    /*
+    Handling multipart uploads with functional endpoints, i ended up with this solution
+    as i could not find one detailing a better way to do it or even how it's done
+     */
+    suspend fun handleFileUpload(serverRequest: ServerRequest): ServerResponse {
+        val partData = serverRequest.awaitMultipartData().toSingleValueMap()
+        val filename = partData["filename"]!!.content()
+            .map { Pair("filename", it.toString(Charset.defaultCharset())) }
+
+        val filename2 = partData["filename2"]!!.content()
+            .map { Pair("filename2", it.toString(Charset.defaultCharset())) }
+
+        val file = partData["file"]!! as FilePart
+
+        val result = Flux.concat(filename, filename2)
+            .collectMap({it.first}, {it.second})
+            .flatMap {
+                file.transferTo(Paths.get("/home/glaze/${it["filename"]}-${it["filename2"]}.png"))
+            }
+
+        return ServerResponse.status(HttpStatus.NO_CONTENT)
+            .bodyAndAwait(result.asFlow())
     }
 
 }

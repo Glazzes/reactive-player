@@ -28,14 +28,17 @@ class GlobalErrorWebExceptionHandler(
             ErrorAttributeOptions.Include.MESSAGE)
 
     override fun getRoutingFunction(errorAttributes: ErrorAttributes?): RouterFunction<ServerResponse> = coRouter {
-        DELETE("/song/*") {handleNotFoundException(it)}
-        GET("/user/*") { handleNotFoundException(it) }
         POST("/user") { handleResourceAlreadyExistsException(it) }
+
+        GET("/user/*")
+            .or(GET("/song/*"))
+            .or(DELETE("/song/*"))
+            .invoke { handleNotFoundException(it) }
     }
 
     private suspend fun handleNotFoundException(serverRequest: ServerRequest): ServerResponse{
         val errors = getErrorAttributes(serverRequest, defaultAttributes)
-        errors["status"] = HttpStatus.CONFLICT.value()
+        errors["status"] = HttpStatus.NOT_FOUND.value()
         mutableListOf("error", "requestId").forEach { errors.remove(it) }
 
         return ServerResponse.status(HttpStatus.NOT_FOUND)

@@ -14,6 +14,7 @@ class SongRouter(private val songHandler: SongHandler){
             POST("") { songHandler.save(it) }
             GET("/{id}") { songHandler.findById(it) }
             DELETE("/{id}") { songHandler.deleteById(it) }
+            POST("/file") { songHandler.handleFileUpload(it) }
         }
     }
 
