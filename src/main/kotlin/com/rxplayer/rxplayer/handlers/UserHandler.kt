@@ -1,6 +1,5 @@
 package com.rxplayer.rxplayer.handlers
 
-import com.rxplayer.rxplayer.configuration.SecurityUserAdapter
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.CreatedUserDTO
 import com.rxplayer.rxplayer.dto.output.FindUserDTO
@@ -11,7 +10,6 @@ import com.rxplayer.rxplayer.repositories.UserRepository
 import com.rxplayer.rxplayer.validator.SignUpRequestValidator
 import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.http.HttpStatus
-import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.validation.BeanPropertyBindingResult
@@ -39,13 +37,21 @@ class UserHandler(
                 .bodyValueAndAwait(customErrors)
         }
 
-        val savedUser = userRepository.existsByUsername(newUser.username)
-            .doOnNext {
-                if(it) throw ResourceAlreadyExistsException("Username ${newUser.username} is already taken")
-            }
-            .flatMap { userRepository.existsByEmail(newUser.email) }
-            .doOnNext {
-                if(it) throw ResourceAlreadyExistsException("Email already belongs to another account")
+        val savedUser = Mono.just(newUser)
+            .flatMap {
+               val existByUsername = userRepository.existsByUsername(it.username)
+                   .handle<Boolean>{ exists, sink ->
+                       if(exists) sink.error(ResourceAlreadyExistsException("Username ${newUser.username} is already taken"))
+                       sink.next(exists)
+                   }
+
+                val existsByEmail = userRepository.existsByEmail(it.email)
+                    .handle <Boolean>{ exists, sink ->
+                        if(exists) sink.error(ResourceAlreadyExistsException("Email already belongs to another account"))
+                        sink.next(exists)
+                    }
+
+                Mono.`when`(existByUsername, existsByEmail)
             }
             .map {
                 User(username = newUser.username,
@@ -59,15 +65,6 @@ class UserHandler(
 
         return ServerResponse.status(HttpStatus.CREATED)
             .bodyValueAndAwait(savedUser.awaitSingle())
-    }
-
-    suspend fun getAuthenticatedUser(serverRequest: ServerRequest): ServerResponse {
-        val authenticatedUser = ReactiveSecurityContextHolder.getContext()
-            .map { (it.authentication.principal as SecurityUserAdapter).user }
-            .map { FindUserDTO(it.id, it.nickName, it.email, it.profilePicture) }
-
-        return ServerResponse.ok()
-            .bodyValueAndAwait(authenticatedUser.awaitSingle())
     }
 
     suspend fun findById(serverRequest: ServerRequest): ServerResponse {

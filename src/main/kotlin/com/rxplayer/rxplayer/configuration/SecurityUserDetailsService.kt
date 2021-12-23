@@ -11,12 +11,10 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Component
 class SecurityUserDetailsService(private val userRepository: UserRepository): ReactiveUserDetailsService {
 
-    /*
-    This stupid unnecessary cast makes compiler compiler happy, so be it...
-     */
+    // Are you confused by the unnecessary casting? Yeah me too, this makes kotlin compiler happy
     override fun findByUsername(username: String): Mono<UserDetails> {
         return userRepository.findByUsername(username)
-            .map { SecurityUserAdapter(it) as UserDetails }
+            .map { SecurityUserAdapter(it) as UserDetails}
             .switchIfEmpty { Mono.error(UsernameNotFoundException("User with username $username does not exists")) }
     }
 

@@ -33,6 +33,8 @@ class WebSecurityConfiguration{
             .csrf { it.disable() }
             .formLogin { it.disable() }
             .httpBasic()
+            .and()
+            .exceptionHandling { it.authenticationEntryPoint(CustomEntryPoint()) }
 
         return http.build()
     }
