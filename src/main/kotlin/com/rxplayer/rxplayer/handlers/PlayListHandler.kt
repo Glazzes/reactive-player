@@ -10,6 +10,7 @@ import com.rxplayer.rxplayer.repositories.PlayListRepository
 import com.rxplayer.rxplayer.repositories.SongRepository
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.server.*
@@ -32,20 +33,28 @@ class PlayListHandler(
             .bodyAndAwait(reactive.asFlow())
     }
 
+    suspend fun findById(serverRequest: ServerRequest): ServerResponse {
+        val id = serverRequest.pathVariable("id")
+        val playlist = playListRepository.findById(id)
+            .switchIfEmpty{ Mono.error(NotFoundException("Playlist with id $id was not found")) }
+
+        return ServerResponse.status(HttpStatus.OK)
+            .bodyValueAndAwait(playlist.awaitSingle())
+    }
+
     suspend fun addSong(serverRequest: ServerRequest): ServerResponse {
         val (playlistId, songId) = serverRequest.awaitBody<PlaylistActionToSong>()
 
         val reactive = playListRepository.findById(playlistId)
             .switchIfEmpty { Mono.error(NotFoundException("Could not find playlist with id $playlistId")) }
-            .flatMap { playlist ->
-                val save = songRepository.findById(songId)
+            .flatMap {
+                songRepository.findById(songId)
                     .switchIfEmpty{ Mono.error(NotFoundException("Could not find song with id $songId")) }
                     .flatMap { song ->
-                        playlist.songs.add(song)
-                        playListRepository.save(playlist)
+                        it.songs.add(song)
+                        playListRepository.save(it)
                     }
-
-                Mono.`when`(save)
+                    .then()
             }
             .map { "Song $songId saved successfully to playlist $playlistId" }
 

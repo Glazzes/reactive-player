@@ -1,11 +1,11 @@
 package com.rxplayer.rxplayer.handlers
 
+import com.rxplayer.rxplayer.configuration.AuthenticationProvider
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.CreatedUserDTO
 import com.rxplayer.rxplayer.dto.output.FindUserDTO
 import com.rxplayer.rxplayer.entities.User
 import com.rxplayer.rxplayer.exception.NotFoundException
-import com.rxplayer.rxplayer.exception.ResourceAlreadyExistsException
 import com.rxplayer.rxplayer.repositories.UserRepository
 import com.rxplayer.rxplayer.validator.SignUpRequestValidator
 import kotlinx.coroutines.reactive.awaitSingle
@@ -38,27 +38,14 @@ class UserHandler(
         }
 
         val savedUser = Mono.just(newUser)
-            .flatMap {
-               val existByUsername = userRepository.existsByUsername(it.username)
-                   .handle<Boolean>{ exists, sink ->
-                       if(exists) sink.error(ResourceAlreadyExistsException("Username ${newUser.username} is already taken"))
-                       sink.next(exists)
-                   }
-
-                val existsByEmail = userRepository.existsByEmail(it.email)
-                    .handle <Boolean>{ exists, sink ->
-                        if(exists) sink.error(ResourceAlreadyExistsException("Email already belongs to another account"))
-                        sink.next(exists)
-                    }
-
-                Mono.`when`(existByUsername, existsByEmail)
-            }
             .map {
                 User(username = newUser.username,
                     nickName = newUser.username,
                     email = newUser.email,
                     password = passwordEncoder.encode(newUser.password),
-                    profilePicture = "")
+                    profilePicture = "",
+                    authenticationProvider = AuthenticationProvider.RX_PLAYER,
+                )
             }
             .flatMap { userRepository.save(it) }
             .map { CreatedUserDTO(it.id, it.username, it.profilePicture) }

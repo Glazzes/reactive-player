@@ -7,8 +7,5 @@ import java.time.LocalDate
 
 data class EntityMetadata(
     @CreatedDate var createdAt: LocalDate? = null,
-
-    @DBRef
-    @CreatedBy
-    var createdBy: String? = null
+    @CreatedBy var createdBy: User? = null
 )

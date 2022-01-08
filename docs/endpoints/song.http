@@ -1,7 +1,7 @@
 # Create a new song, requires authentication
 POST localhost:8080/song
 Content-Type: application/json
-Authorization: Basic cmVhY3RpdmUtdXNlcjpzZWN1cmU
+# Authorization: Basic cmVhY3RpdmUtdXNlcjpzZWN1cmU
 
 {
   "title": "Superhero"

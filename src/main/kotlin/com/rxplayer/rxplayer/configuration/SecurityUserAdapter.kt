@@ -13,7 +13,7 @@ class SecurityUserAdapter(val user: User) : UserDetails {
     }
 
     override fun getPassword(): String {
-        return user.password
+        return user.password ?: ""
     }
 
     override fun getUsername(): String {

@@ -1,5 +1,6 @@
 package com.rxplayer.rxplayer.entities
 
+import com.rxplayer.rxplayer.configuration.AuthenticationProvider
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 
@@ -9,7 +10,8 @@ class User(
     var id: String? = null,
     var username: String,
     var nickName: String,
-    var password: String,
     var email: String,
-    var profilePicture: String
+    var password: String?,
+    var profilePicture: String,
+    var authenticationProvider: AuthenticationProvider
 )

@@ -1,5 +1,6 @@
 package com.rxplayer.rxplayer.configuration
 
+import com.rxplayer.rxplayer.configuration.oauth2.Oauth2SuccessHandler
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
@@ -10,12 +11,16 @@ import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.web.cors.CorsConfiguration
 
 @EnableWebFluxSecurity
-class WebSecurityConfiguration{
+class WebSecurityConfiguration(
+    private val oauth2SuccessHandler: Oauth2SuccessHandler
+){
 
     @Bean
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http.authorizeExchange {
-            it.pathMatchers("/user/**").permitAll()
+            it.pathMatchers("/login").permitAll()
+                .pathMatchers("/user/**").permitAll()
+                .pathMatchers(HttpMethod.GET, "/playlist/{id}").permitAll()
                 .pathMatchers(HttpMethod.GET, "/song/{id}").permitAll()
                 .anyExchange().authenticated()
             }
@@ -31,10 +36,11 @@ class WebSecurityConfiguration{
                 }
             }
             .csrf { it.disable() }
-            .formLogin { it.disable() }
             .httpBasic()
             .and()
-            .exceptionHandling { it.authenticationEntryPoint(CustomEntryPoint()) }
+            .oauth2Login {
+                it.authenticationSuccessHandler(oauth2SuccessHandler)
+            }
 
         return http.build()
     }

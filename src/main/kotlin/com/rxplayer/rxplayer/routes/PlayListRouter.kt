@@ -12,6 +12,7 @@ class PlayListRouter(private val playListHandler: PlayListHandler) {
     fun coroutineRouter() = coRouter {
         "/playlist".nest {
             POST("") { playListHandler.save(it) }
+            GET("/{id}") { playListHandler.findById(it) }
             POST("/song") { playListHandler.addSong(it) }
             POST("/{id}/cover")
 

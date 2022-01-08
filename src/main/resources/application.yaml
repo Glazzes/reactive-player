@@ -1,4 +1,14 @@
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            clientId:
+            clientSecret: 
+            scope:
+              - profile
+              - email
   data:
     mongodb:
       host: localhost
