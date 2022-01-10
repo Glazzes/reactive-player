@@ -14,9 +14,9 @@ class PlayListRouter(private val playListHandler: PlayListHandler) {
             POST("") { playListHandler.save(it) }
             GET("/{id}") { playListHandler.findById(it) }
             POST("/song") { playListHandler.addSong(it) }
-            POST("/{id}/cover")
-
+            GET("/{id}/songs") { playListHandler.findSongs(it) }
             DELETE("/song") { playListHandler.deleteSong(it) }
+            DELETE("/{id}") { playListHandler.delete(it) }
         }
     }
 

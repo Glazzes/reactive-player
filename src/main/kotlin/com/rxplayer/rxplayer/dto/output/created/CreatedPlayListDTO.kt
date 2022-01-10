@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.dto.output
+package com.rxplayer.rxplayer.dto.output.created
 
 data class CreatedPlayListDTO(
     val id: String?,

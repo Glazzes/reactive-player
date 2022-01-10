@@ -13,6 +13,8 @@ support for this approach with `corutines` along with coRouters
 - Crud options for Songs
 - Crud options for PlayList
 - Reactive security
+- Jwt based authentication
+- Google Oauth2 login/registration
 
 ### Technologies
 - Kotlin

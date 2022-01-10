@@ -1,0 +1,14 @@
+{
+  "properties": [
+    {
+      "name": "rx-player.music-folder",
+      "type": "java.lang.String",
+      "description": "File system's path to the folder that will store mp3 files"
+    },
+    {
+      "name": "rx-player.cover-folder",
+      "type": "java.lang.String",
+      "description": "File system's path to the folder that will store cover image files"
+    }
+  ]
+}

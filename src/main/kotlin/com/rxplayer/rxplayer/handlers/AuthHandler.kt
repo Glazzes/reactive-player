@@ -1,7 +1,7 @@
 package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.configuration.SecurityUserAdapter
-import com.rxplayer.rxplayer.dto.output.FindUserDTO
+import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.stereotype.Component

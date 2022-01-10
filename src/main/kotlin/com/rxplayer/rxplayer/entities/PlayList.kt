@@ -9,9 +9,6 @@ data class PlayList(
     @Id
     var id: String? = null,
     var name: String,
-
-    @DBRef
     var songs: MutableSet<Song> = HashSet(),
-
     var metadata: EntityMetadata
 )

@@ -1,11 +1,15 @@
+rx-player:
+  music-folder: /home/glaze/rx-player/music/
+  cover-folder: /home/glaze/rx-player/cover/
+
 spring:
   security:
     oauth2:
       client:
         registration:
           google:
-            clientId:
-            clientSecret: 
+            clientId: 321123337702-25rfusrbc8f20lnpdqshhgsjo77dmrde.apps.googleusercontent.com
+            clientSecret: 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
             scope:
               - profile
               - email

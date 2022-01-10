@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.dto.output
+package com.rxplayer.rxplayer.dto.output.find
 
 data class FindUserDTO(
     val id: String?,

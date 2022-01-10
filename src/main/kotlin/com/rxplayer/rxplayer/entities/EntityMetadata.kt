@@ -6,6 +6,6 @@ import org.springframework.data.mongodb.core.mapping.DBRef
 import java.time.LocalDate
 
 data class EntityMetadata(
-    @CreatedDate var createdAt: LocalDate? = null,
-    @CreatedBy var createdBy: User? = null
+    @CreatedBy var createdBy: User? = null,
+    @CreatedDate var createdAt: LocalDate? = null
 )

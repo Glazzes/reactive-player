@@ -2,8 +2,8 @@ package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.configuration.AuthenticationProvider
 import com.rxplayer.rxplayer.dto.input.SignupRequest
-import com.rxplayer.rxplayer.dto.output.CreatedUserDTO
-import com.rxplayer.rxplayer.dto.output.FindUserDTO
+import com.rxplayer.rxplayer.dto.output.created.CreatedUserDTO
+import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.User
 import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.UserRepository

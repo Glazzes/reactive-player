@@ -6,6 +6,7 @@ import reactor.core.publisher.Mono
 
 interface UserRepository : ReactiveMongoRepository<User, String> {
     fun findByUsername(username: String): Mono<User>
+    fun findByEmail(email: String): Mono<User>
 
     // Do not trust intellij warnings!!!
     fun existsByUsername(username: String): Mono<Boolean>

@@ -14,7 +14,6 @@ import org.springframework.web.cors.CorsConfiguration
 class WebSecurityConfiguration(
     private val oauth2SuccessHandler: Oauth2SuccessHandler
 ){
-
     @Bean
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http.authorizeExchange {
@@ -30,14 +29,13 @@ class WebSecurityConfiguration(
                     configuration.maxAge = 3600
                     configuration.allowCredentials = true
                     configuration.allowedMethods = listOf("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
-                    configuration.allowedOrigins = listOf("http://localhost:19006")
+                    configuration.allowedOrigins = listOf("*")
 
                     configuration
                 }
             }
             .csrf { it.disable() }
-            .httpBasic()
-            .and()
+            .httpBasic {}
             .oauth2Login {
                 it.authenticationSuccessHandler(oauth2SuccessHandler)
             }
