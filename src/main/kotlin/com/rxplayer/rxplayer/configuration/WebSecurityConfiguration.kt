@@ -1,6 +1,7 @@
 package com.rxplayer.rxplayer.configuration
 
 import com.rxplayer.rxplayer.configuration.oauth2.Oauth2SuccessHandler
+import com.rxplayer.rxplayer.configuration.util.CustomEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
@@ -17,8 +18,7 @@ class WebSecurityConfiguration(
     @Bean
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http.authorizeExchange {
-            it.pathMatchers("/login").permitAll()
-                .pathMatchers("/user/**").permitAll()
+            it.pathMatchers("/oauth/**").permitAll()
                 .pathMatchers(HttpMethod.GET, "/playlist/{id}").permitAll()
                 .pathMatchers(HttpMethod.GET, "/song/{id}").permitAll()
                 .anyExchange().authenticated()
@@ -38,6 +38,9 @@ class WebSecurityConfiguration(
             .httpBasic {}
             .oauth2Login {
                 it.authenticationSuccessHandler(oauth2SuccessHandler)
+            }
+            .exceptionHandling {
+                it.authenticationEntryPoint(CustomEntryPoint())
             }
 
         return http.build()
