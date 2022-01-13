@@ -8,5 +8,6 @@ class Song(
     @Id
     var id: String? = null,
     var title: String,
-    var metadata: EntityMetadata
+    val containedInPlaylists: MutableSet<String> = HashSet(),
+    val metadata: EntityMetadata
 )

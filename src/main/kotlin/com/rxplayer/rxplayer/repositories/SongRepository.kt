@@ -1,6 +1,9 @@
 package com.rxplayer.rxplayer.repositories
 
 import com.rxplayer.rxplayer.entities.Song
-import org.springframework.data.mongodb.repository.ReactiveMongoRepository
+import kotlinx.coroutines.flow.Flow
+import org.springframework.data.repository.kotlin.CoroutineSortingRepository
 
-interface SongRepository : ReactiveMongoRepository<Song, String>
+interface SongRepository : CoroutineSortingRepository<Song, String> {
+    suspend fun findAllByContainedInPlaylistsContains(playlistId: String) : Flow<Song>
+}

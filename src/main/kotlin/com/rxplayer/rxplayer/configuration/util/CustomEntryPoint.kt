@@ -17,14 +17,14 @@ class CustomEntryPoint : ServerAuthenticationEntryPoint {
         exchange.response.statusCode = HttpStatus.BAD_REQUEST
 
         val response = ErrorResponse(LocalDateTime.now(), ex.localizedMessage)
-        val bytes = Jackson2JsonEncoder().encodeValue(
+        val buffer = Jackson2JsonEncoder().encodeValue(
             response,
             exchange.response.bufferFactory(),
-            ResolvableType.forClass(ErrorResponse::class.java),
+            ResolvableType.forInstance(response),
             MediaType.APPLICATION_JSON,
             Hints.from(Hints.LOG_PREFIX_HINT, exchange.logPrefix))
 
-        return exchange.response.writeWith(Mono.just(bytes))
+        return exchange.response.writeWith(Mono.just(buffer))
     }
 
 }

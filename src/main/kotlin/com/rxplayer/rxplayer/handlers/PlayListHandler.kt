@@ -1,134 +1,111 @@
 package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.input.PlaylistActionToSong
-import com.rxplayer.rxplayer.dto.input.PlayListRequest
-import com.rxplayer.rxplayer.dto.output.created.CreatedPlayListDTO
+import com.rxplayer.rxplayer.dto.input.SongRequest
 import com.rxplayer.rxplayer.dto.output.find.FindPlaylistDTO
 import com.rxplayer.rxplayer.dto.output.find.FindSongDTO
 import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.EntityMetadata
 import com.rxplayer.rxplayer.entities.PlayList
 import com.rxplayer.rxplayer.exception.NotFoundException
-import com.rxplayer.rxplayer.repositories.PlayListRepository
+import com.rxplayer.rxplayer.repositories.PlaylistRepository
 import com.rxplayer.rxplayer.repositories.SongRepository
-import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.flow.map
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.server.*
-import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.switchIfEmpty
 
 @Service
 class PlayListHandler(
-    private val playListRepository: PlayListRepository,
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    private val playlistRepository: PlaylistRepository
     ){
 
     suspend fun save(serverRequest: ServerRequest): ServerResponse {
-        val reactive = serverRequest.bodyToMono(PlayListRequest::class.java)
-            .map { PlayList(name = it.title, metadata = EntityMetadata()) }
-            .flatMap { playListRepository.save(it) }
-            .map { CreatedPlayListDTO(it.id, it.name) }
-
+        val newPlaylistRequest = serverRequest.awaitBody<SongRequest>()
+        val playList = PlayList(name = newPlaylistRequest.title, metadata = EntityMetadata())
         return ServerResponse.status(HttpStatus.CREATED)
-            .bodyAndAwait(reactive.asFlow())
+            .bodyValueAndAwait(playlistRepository.save(playList))
     }
 
     suspend fun findById(serverRequest: ServerRequest): ServerResponse {
         val id = serverRequest.pathVariable("id")
-        val playlist = playListRepository.findById(id)
-            .switchIfEmpty{ Mono.error(NotFoundException("Playlist with id $id was not found")) }
-            .map {
-                val creator = it.metadata.createdBy ?: throw NotFoundException("User not found.")
-                val createdDate = it.metadata.createdAt ?: throw IllegalStateException("Null created date.")
+        val foundPlaylist = playlistRepository.findById(id)
 
-                val userDTO = FindUserDTO(
-                    creator.id,
-                    creator.nickName,
-                    creator.email,
-                    creator.profilePicture
-                )
-                FindPlaylistDTO(it.id, it.name, userDTO, createdDate)
-            }
+        return foundPlaylist?.let {
+            val creator = it.metadata.createdBy ?: throw NotFoundException("User not found.")
+            val createdDate = it.metadata.createdAt ?: throw IllegalStateException("Null created date.")
 
-        return ServerResponse.status(HttpStatus.OK)
-            .bodyValueAndAwait(playlist.awaitSingle())
+            val userDTO = FindUserDTO(
+                creator.id,
+                creator.nickName,
+                creator.email,
+                creator.profilePicture)
+
+            val dto = FindPlaylistDTO(it.id, it.name, userDTO, createdDate)
+            ServerResponse.ok().bodyValueAndAwait(dto)
+        } ?: ServerResponse.notFound().buildAndAwait()
     }
 
     suspend fun findSongs(serverRequest: ServerRequest): ServerResponse {
         val id = serverRequest.pathVariable("id")
-        val playlist = playListRepository.findById(id)
-            .switchIfEmpty{ Mono.error(NotFoundException("Playlist with id $id was not found")) }
-            .map { it.songs }
-            .map { it.map {s ->
-                    val metadata = s.metadata.createdBy ?: throw IllegalStateException("")
-                    val createdBy = FindUserDTO(
-                        metadata.id,
-                        metadata.nickName,
-                        metadata.email,
-                        metadata.profilePicture)
-                    FindSongDTO(s.id, s.title,createdBy, s.metadata.createdAt)
-            }}
+        val exists = playlistRepository.existsById(id)
+        if(!exists) {
+            return ServerResponse.notFound().buildAndAwait()
+        }
 
-        return ServerResponse.status(HttpStatus.OK)
-            .bodyAndAwait(playlist.asFlow())
+        val songs = songRepository.findAllByContainedInPlaylistsContains(id)
+            .map {
+                val createdBy = it.metadata.createdBy ?: throw IllegalStateException("Song creator user must not be null")
+                val userDto = FindUserDTO(createdBy.id, createdBy.nickName, createdBy.email, createdBy.profilePicture)
+                FindSongDTO(it.id, it.title, userDto, it.metadata.createdAt)
+            }
+
+        return ServerResponse.ok().bodyAndAwait(songs)
     }
 
     suspend fun addSong(serverRequest: ServerRequest): ServerResponse {
         val (playlistId, songId) = serverRequest.awaitBody<PlaylistActionToSong>()
+        val playlist = playlistRepository.findById(playlistId) ?:
+            throw NotFoundException("Can not add song to a playlist that does not exists $playlistId")
 
-        val reactive = playListRepository.findById(playlistId)
-            .switchIfEmpty { Mono.error(NotFoundException("Could not find playlist with id $playlistId")) }
-            .flatMap {
-                songRepository.findById(songId)
-                    .switchIfEmpty{ Mono.error(NotFoundException("Could not find song with id $songId")) }
-                    .flatMap { song ->
-                        it.songs.add(song)
-                        playListRepository.save(it)
-                    }
-            }
-            .map { "Song $songId saved successfully to playlist $playlistId" }
+        val song = songRepository.findById(songId) ?:
+            throw NotFoundException("Can not add song $songId because it does not exists")
 
+        song.containedInPlaylists.add(playlistId)
+        playlist.songs.add(song)
+
+        songRepository.save(song)
+        val playlistWithNewSong = playlistRepository.save(playlist)
         return ServerResponse.status(HttpStatus.NO_CONTENT)
-            .bodyValueAndAwait(reactive.awaitSingle())
+            .bodyValueAndAwait(playlistWithNewSong)
     }
 
     suspend fun deleteSong(serverRequest: ServerRequest): ServerResponse {
         val (playlistId, songId) = serverRequest.awaitBody<PlaylistActionToSong>()
+        val playlist = playlistRepository.findById(playlistId) ?:
+            throw NotFoundException("Can not delete song from a playlist that does not exists $playlistId")
 
-        val reactive = playListRepository.findById(playlistId)
-            .switchIfEmpty { Mono.error(NotFoundException("Could not find playlist with id $playlistId")) }
-            .flatMap { playlist ->
-                val save = songRepository.findById(songId)
-                    .switchIfEmpty{
-                        Mono.error(NotFoundException("Could not find song with id $songId in playlist $playlistId"))
-                    }
-                    .flatMap { song ->
-                        playlist.songs.remove(song)
-                        playListRepository.save(playlist)
-                    }
+        val song = songRepository.findById(songId) ?:
+            throw NotFoundException("Can not delete song $songId from playlist $playlistId because the song does not exists")
 
-                Mono.`when`(save)
-            }
+        song.containedInPlaylists.remove(playlistId)
+        playlist.songs.remove(song)
 
-        return ServerResponse.status(HttpStatus.NO_CONTENT)
-            .bodyAndAwait(reactive.asFlow())
+        songRepository.save(song)
+        playlistRepository.save(playlist)
+        return ServerResponse.status(HttpStatus.NO_CONTENT).buildAndAwait()
     }
 
     suspend fun delete(serverRequest: ServerRequest): ServerResponse{
         val playlistId = serverRequest.pathVariable("id")
-        val reactive = playListRepository.existsById(playlistId)
-            .handle<Boolean> { exists, sink ->
-                if(exists){
-                    sink.next(exists)
-                }else{
-                    sink.error(NotFoundException("Playlist with id $playlistId does not exists"))
-                }
-            }
-            .flatMap { playListRepository.deleteById(playlistId) }
+        val exists = playlistRepository.existsById(playlistId)
 
-        return ServerResponse.status(HttpStatus.NO_CONTENT)
-            .bodyAndAwait(reactive.asFlow())
+        if(!exists){
+            throw NotFoundException("Can not delete playlist $playlistId, because it does not exists")
+        }
+
+        playlistRepository.deleteById(playlistId)
+        return ServerResponse.status(HttpStatus.NO_CONTENT).buildAndAwait()
     }
 }

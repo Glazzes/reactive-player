@@ -12,6 +12,6 @@ class User(
     var nickName: String,
     var email: String,
     var password: String?,
-    var profilePicture: String,
-    var authenticationProvider: AuthenticationProvider
+    var profilePicture: String = "",
+    var authenticationProvider: AuthenticationProvider = AuthenticationProvider.RX_PLAYER
 )

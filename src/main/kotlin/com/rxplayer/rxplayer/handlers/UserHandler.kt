@@ -1,31 +1,29 @@
 package com.rxplayer.rxplayer.handlers
 
-import com.rxplayer.rxplayer.configuration.AuthenticationProvider
+import com.rxplayer.rxplayer.configuration.SecurityUserAdapter
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.created.CreatedUserDTO
 import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.User
-import com.rxplayer.rxplayer.exception.NotFoundException
-import com.rxplayer.rxplayer.repositories.UserRepository
+import com.rxplayer.rxplayer.repositories.CoroutineUserRepository
 import com.rxplayer.rxplayer.validator.SignUpRequestValidator
-import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.http.HttpStatus
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.web.reactive.function.server.*
-import reactor.core.publisher.Mono
 
 @Service
 class UserHandler(
-    private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val signUpValidator: SignUpRequestValidator
+    private val signUpValidator: SignUpRequestValidator,
+    private val userRepository: CoroutineUserRepository
 ){
     suspend fun save(request: ServerRequest): ServerResponse {
-        val newUser = request.awaitBody<SignupRequest>()
-        val errors = BeanPropertyBindingResult(newUser, SignupRequest::class.java.name)
-        signUpValidator.validate(newUser, errors)
+        val signup = request.awaitBody<SignupRequest>()
+        val errors = BeanPropertyBindingResult(signup, SignupRequest::class.java.name)
+        signUpValidator.validate(signup, errors)
 
         if(errors.hasFieldErrors()){
             val customErrors: MutableMap<String, String?> = HashMap()
@@ -37,33 +35,34 @@ class UserHandler(
                 .bodyValueAndAwait(customErrors)
         }
 
-        val savedUser = Mono.just(newUser)
-            .map {
-                User(username = newUser.username,
-                    nickName = newUser.username,
-                    email = newUser.email,
-                    password = passwordEncoder.encode(newUser.password),
-                    profilePicture = "",
-                    authenticationProvider = AuthenticationProvider.RX_PLAYER,
-                )
-            }
-            .flatMap { userRepository.save(it) }
-            .map { CreatedUserDTO(it.id, it.username, it.profilePicture) }
+        val user = User(
+            username = signup.username,
+            nickName = signup.username,
+            email = signup.email,
+            password = passwordEncoder.encode(signup.password))
 
+        val savedUser = userRepository.save(user)
+        val dto = CreatedUserDTO(savedUser.id, savedUser.username, savedUser.profilePicture)
         return ServerResponse.status(HttpStatus.CREATED)
-            .bodyValueAndAwait(savedUser.awaitSingle())
+            .bodyValueAndAwait(dto)
+    }
+
+    suspend fun findCurrentUser(serverRequest: ServerRequest): ServerResponse {
+        val principal = serverRequest.awaitPrincipal() as? UsernamePasswordAuthenticationToken?
+            ?: throw IllegalStateException("User is not authenticated")
+
+        val currentUser = (principal.principal as SecurityUserAdapter).user
+        return ServerResponse.ok().bodyValueAndAwait(currentUser)
     }
 
     suspend fun findById(serverRequest: ServerRequest): ServerResponse {
         val id = serverRequest.pathVariable("id")
         val user = userRepository.findById(id)
-            .map { FindUserDTO(it.id, it.username, it.nickName, it.profilePicture) }
-            .switchIfEmpty(
-                Mono.error(NotFoundException("User with id $id was not found."))
-            )
 
-        return ServerResponse.ok()
-            .bodyValueAndAwait(user.awaitSingle())
+        return user?.let {
+            val dto = FindUserDTO(it.id, it.username, it.nickName, it.profilePicture)
+            ServerResponse.ok().bodyValueAndAwait(dto)
+        } ?: ServerResponse.notFound().buildAndAwait()
     }
 
 }

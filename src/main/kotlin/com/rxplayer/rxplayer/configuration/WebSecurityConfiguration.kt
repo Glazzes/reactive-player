@@ -4,6 +4,7 @@ import com.rxplayer.rxplayer.configuration.oauth2.Oauth2SuccessHandler
 import com.rxplayer.rxplayer.configuration.util.CustomEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -12,16 +13,19 @@ import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.web.cors.CorsConfiguration
 
 @EnableWebFluxSecurity
-class WebSecurityConfiguration(
-    private val oauth2SuccessHandler: Oauth2SuccessHandler
-){
+@EnableReactiveMethodSecurity
+class WebSecurityConfiguration(private val oauth2SuccessHandler: Oauth2SuccessHandler){
+
     @Bean
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
-        http.authorizeExchange {
-            it.pathMatchers("/oauth/**").permitAll()
-                .pathMatchers(HttpMethod.GET, "/playlist/{id}").permitAll()
-                .pathMatchers(HttpMethod.GET, "/song/{id}").permitAll()
-                .anyExchange().authenticated()
+        http
+            .authorizeExchange {
+                it.pathMatchers("/home/**").permitAll()
+                    .pathMatchers("/login").permitAll()
+                    .pathMatchers("/oauth/**").permitAll()
+                    .pathMatchers(HttpMethod.GET, "/playlist/{id}").permitAll()
+                    .pathMatchers(HttpMethod.GET, "/song/{id}").permitAll()
+                    .anyExchange().permitAll()
             }
             .cors {
                 it.configurationSource {

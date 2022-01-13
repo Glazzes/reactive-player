@@ -1,5 +1,6 @@
 package com.rxplayer.rxplayer.configuration.filter
 
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
