@@ -5,8 +5,10 @@ import com.rxplayer.rxplayer.dto.output.find.FindSongDTO
 import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.EntityMetadata
 import com.rxplayer.rxplayer.entities.Song
+import com.rxplayer.rxplayer.exception.InvalidOperationException
 import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.SongRepository
+import com.rxplayer.rxplayer.util.AuthUtil
 import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.FilePart
 import org.springframework.http.codec.multipart.FormFieldPart
@@ -44,8 +46,8 @@ class SongHandler( private val songRepository: SongRepository ){
             val metadata = song.metadata.createdBy ?: throw IllegalStateException("")
             val createdBy = FindUserDTO(
                 metadata.id,
-                metadata.nickName,
-                metadata.nickName,
+                metadata.username,
+                metadata.email,
                 metadata.profilePicture)
 
             FindSongDTO(song.id, song.title, createdBy, song.metadata.createdAt)
@@ -53,15 +55,17 @@ class SongHandler( private val songRepository: SongRepository ){
         } ?: ServerResponse.notFound().buildAndAwait()
     }
 
-    suspend fun deleteById(serverRequest: ServerRequest): ServerResponse {
+    suspend fun delete(serverRequest: ServerRequest): ServerResponse {
         val songId = serverRequest.pathVariable("id")
-        val exists = songRepository.existsById(songId)
-
-        if(!exists){
+        val song = songRepository.findById(songId) ?:
             throw NotFoundException("Can not delete song with id ${songId}, because it does not exits")
+
+        val createdBy = song.metadata.createdBy
+        if(!AuthUtil.canPerformAction(createdBy)){
+            throw InvalidOperationException("You can not delete a song that do not own")
         }
 
-        songRepository.deleteById(songId)
+        songRepository.delete(song)
         return ServerResponse.status(HttpStatus.NO_CONTENT).buildAndAwait()
     }
 }

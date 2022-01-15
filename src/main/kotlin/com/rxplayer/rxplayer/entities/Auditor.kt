@@ -1,6 +1,6 @@
 package com.rxplayer.rxplayer.entities
 
-import com.rxplayer.rxplayer.configuration.SecurityUserAdapter
+import com.rxplayer.rxplayer.security.SecurityUserAdapter
 import org.springframework.data.domain.ReactiveAuditorAware
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.stereotype.Component

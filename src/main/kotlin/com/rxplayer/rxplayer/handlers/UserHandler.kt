@@ -1,11 +1,11 @@
 package com.rxplayer.rxplayer.handlers
 
-import com.rxplayer.rxplayer.configuration.SecurityUserAdapter
+import com.rxplayer.rxplayer.security.SecurityUserAdapter
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.created.CreatedUserDTO
 import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.User
-import com.rxplayer.rxplayer.repositories.CoroutineUserRepository
+import com.rxplayer.rxplayer.repositories.UserRepository
 import com.rxplayer.rxplayer.validator.SignUpRequestValidator
 import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -18,7 +18,7 @@ import org.springframework.web.reactive.function.server.*
 class UserHandler(
     private val passwordEncoder: PasswordEncoder,
     private val signUpValidator: SignUpRequestValidator,
-    private val userRepository: CoroutineUserRepository
+    private val userRepository: UserRepository
 ){
     suspend fun save(request: ServerRequest): ServerResponse {
         val signup = request.awaitBody<SignupRequest>()
@@ -37,7 +37,6 @@ class UserHandler(
 
         val user = User(
             username = signup.username,
-            nickName = signup.username,
             email = signup.email,
             password = passwordEncoder.encode(signup.password))
 
@@ -51,8 +50,9 @@ class UserHandler(
         val principal = serverRequest.awaitPrincipal() as? UsernamePasswordAuthenticationToken?
             ?: throw IllegalStateException("User is not authenticated")
 
-        val currentUser = (principal.principal as SecurityUserAdapter).user
-        return ServerResponse.ok().bodyValueAndAwait(currentUser)
+        val user = (principal.principal as SecurityUserAdapter).user
+        val dto = FindUserDTO(user.id, user.username, user.email, user.profilePicture)
+        return ServerResponse.ok().bodyValueAndAwait(dto)
     }
 
     suspend fun findById(serverRequest: ServerRequest): ServerResponse {
@@ -60,7 +60,7 @@ class UserHandler(
         val user = userRepository.findById(id)
 
         return user?.let {
-            val dto = FindUserDTO(it.id, it.username, it.nickName, it.profilePicture)
+            val dto = FindUserDTO(it.id, it.username, it.username, it.profilePicture)
             ServerResponse.ok().bodyValueAndAwait(dto)
         } ?: ServerResponse.notFound().buildAndAwait()
     }

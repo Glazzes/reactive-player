@@ -1,13 +1,13 @@
 package com.rxplayer.rxplayer.validator
 
 import com.rxplayer.rxplayer.dto.input.SignupRequest
-import com.rxplayer.rxplayer.repositories.CoroutineUserRepository
+import com.rxplayer.rxplayer.repositories.UserRepository
 import org.springframework.stereotype.Component
 import org.springframework.validation.Errors
 import org.springframework.validation.ValidationUtils
 
 @Component
-class SignUpRequestValidator(private val userRepository: CoroutineUserRepository){
+class SignUpRequestValidator(private val userRepository: UserRepository){
 
     suspend fun validate(target: SignupRequest, errors: Errors) {
         ValidationUtils.rejectIfEmptyOrWhitespace(errors, "username", "Username is required")

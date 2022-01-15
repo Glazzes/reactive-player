@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.configuration
+package com.rxplayer.rxplayer.security
 
 import com.rxplayer.rxplayer.entities.User
 import org.springframework.security.core.GrantedAuthority

@@ -7,15 +7,17 @@ import com.rxplayer.rxplayer.dto.output.find.FindSongDTO
 import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
 import com.rxplayer.rxplayer.entities.EntityMetadata
 import com.rxplayer.rxplayer.entities.PlayList
+import com.rxplayer.rxplayer.exception.InvalidOperationException
 import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.PlaylistRepository
 import com.rxplayer.rxplayer.repositories.SongRepository
+import com.rxplayer.rxplayer.util.AuthUtil
 import kotlinx.coroutines.flow.map
 import org.springframework.http.HttpStatus
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.*
 
-@Service
+@Component
 class PlayListHandler(
     private val songRepository: SongRepository,
     private val playlistRepository: PlaylistRepository
@@ -38,7 +40,7 @@ class PlayListHandler(
 
             val userDTO = FindUserDTO(
                 creator.id,
-                creator.nickName,
+                creator.username,
                 creator.email,
                 creator.profilePicture)
 
@@ -57,7 +59,7 @@ class PlayListHandler(
         val songs = songRepository.findAllByContainedInPlaylistsContains(id)
             .map {
                 val createdBy = it.metadata.createdBy ?: throw IllegalStateException("Song creator user must not be null")
-                val userDto = FindUserDTO(createdBy.id, createdBy.nickName, createdBy.email, createdBy.profilePicture)
+                val userDto = FindUserDTO(createdBy.id, createdBy.username, createdBy.email, createdBy.profilePicture)
                 FindSongDTO(it.id, it.title, userDto, it.metadata.createdAt)
             }
 
@@ -99,13 +101,15 @@ class PlayListHandler(
 
     suspend fun delete(serverRequest: ServerRequest): ServerResponse{
         val playlistId = serverRequest.pathVariable("id")
-        val exists = playlistRepository.existsById(playlistId)
-
-        if(!exists){
+        val playlist = playlistRepository.findById(playlistId) ?:
             throw NotFoundException("Can not delete playlist $playlistId, because it does not exists")
+
+        val createdBy = playlist.metadata.createdBy
+        if(!AuthUtil.canPerformAction(createdBy)){
+            throw InvalidOperationException("You can not delete a resource that you do not own")
         }
 
-        playlistRepository.deleteById(playlistId)
+        playlistRepository.delete(playlist)
         return ServerResponse.status(HttpStatus.NO_CONTENT).buildAndAwait()
     }
 }

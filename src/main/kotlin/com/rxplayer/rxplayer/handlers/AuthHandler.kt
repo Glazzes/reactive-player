@@ -1,9 +1,9 @@
 package com.rxplayer.rxplayer.handlers
 
-import com.rxplayer.rxplayer.configuration.AuthenticationProvider
 import com.rxplayer.rxplayer.dto.input.UserCredentials
-import com.rxplayer.rxplayer.exception.InvalidAuthenticationProviderException
-import com.rxplayer.rxplayer.repositories.CoroutineUserRepository
+import com.rxplayer.rxplayer.repositories.UserRepository
+import com.rxplayer.rxplayer.security.AuthenticationProvider
+import com.rxplayer.rxplayer.util.JwtUtil
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.security.authentication.BadCredentialsException
@@ -18,32 +18,41 @@ import java.time.Duration
 
 @Component
 class AuthHandler(
-    private val passwordEncoder: PasswordEncoder,
-    private val userRepository: CoroutineUserRepository
+    private val jwtUtil: JwtUtil,
+    private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder
 ){
 
     suspend fun login(serverRequest: ServerRequest): ServerResponse {
         val credentials = serverRequest.awaitBody<UserCredentials>()
-        val user = userRepository.findByUsername(credentials.username) ?:
+        val user = userRepository.findByEmailAndAuthenticationProvider(credentials.email, AuthenticationProvider.RX_PLAYER) ?:
             throw UsernameNotFoundException("There's not account associated with this username")
-
-        if(user.authenticationProvider != AuthenticationProvider.RX_PLAYER){
-            throw InvalidAuthenticationProviderException("User can not authenticate through this provider")
-        }
 
         if(!passwordEncoder.matches(credentials.password, user.password)){
             throw BadCredentialsException("User credentials are invalid")
         }
 
-        val jwtCookie = ResponseCookie.fromClientResponse("Access-Token", "Epic Jwt token")
+        val jwt = jwtUtil.create(user.email)
+        val jwtCookie = ResponseCookie.fromClientResponse("Access-Token", jwt)
             .httpOnly(true)
             .path("/")
-            .domain("http://localhost:8080")
             .maxAge(Duration.ofHours(1L))
             .build()
 
-        return ServerResponse.status(HttpStatus.OK)
+        return ServerResponse.status(HttpStatus.NO_CONTENT)
             .header("Set-Cookie", jwtCookie.toString())
+            .buildAndAwait()
+    }
+
+    suspend fun logout(serverRequest: ServerRequest): ServerResponse {
+        val deleteAuthCookie = ResponseCookie.fromClientResponse("Access-Token", "")
+            .maxAge(Duration.ofSeconds(0L))
+            .httpOnly(true)
+            .path("/")
+            .build()
+
+        return ServerResponse.status(HttpStatus.NO_CONTENT)
+            .header("Set-Cookie", deleteAuthCookie.toString())
             .buildAndAwait()
     }
 

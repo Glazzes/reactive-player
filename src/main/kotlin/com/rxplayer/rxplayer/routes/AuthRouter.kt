@@ -11,6 +11,7 @@ class AuthRouter(private val authHandler: AuthHandler){
     @Bean(name = ["auth-coroutine-router"])
     fun coroutineRouter() = coRouter {
         POST("/login") { authHandler.login(it) }
+        POST("/logout") { authHandler.logout(it) }
     }
 
 }

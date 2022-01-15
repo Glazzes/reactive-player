@@ -1,4 +1,4 @@
-package com.rxplayer.rxplayer.configuration
+package com.rxplayer.rxplayer.security
 
 enum class AuthenticationProvider {
     RX_PLAYER,
