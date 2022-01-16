@@ -13,9 +13,10 @@ class UserRouter(
     @Bean(name = ["user-co-router"])
     fun coroutineRouter() = coRouter {
         "/user".nest {
-            GET("") { userHandler.findCurrentUser(it) }
+            GET("/me") { userHandler.findMyself(it) }
             POST("") { userHandler.save(it) }
             GET("/{id}") { userHandler.findById(it) }
+            PATCH("/{id}/edit") { userHandler.edit(it) }
         }
     }
 

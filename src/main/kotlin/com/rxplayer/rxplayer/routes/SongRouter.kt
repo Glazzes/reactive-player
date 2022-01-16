@@ -13,6 +13,7 @@ class SongRouter(private val songHandler: SongHandler){
         "/song".nest {
             POST("") { songHandler.save(it) }
             GET("/{id}") { songHandler.findById(it) }
+            POST("/{id}/rename") { songHandler.rename(it) }
             DELETE("/{id}") { songHandler.delete(it) }
         }
     }

@@ -9,6 +9,7 @@ data class PlayList(
     @Id
     var id: String? = null,
     var name: String,
+    var cover: String = "",
     var songs: MutableSet<Song> = HashSet(),
     var metadata: EntityMetadata
 )

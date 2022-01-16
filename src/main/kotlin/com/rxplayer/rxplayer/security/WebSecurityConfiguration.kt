@@ -34,7 +34,8 @@ class WebSecurityConfiguration(
             .authorizeExchange {
                 it.pathMatchers(HttpMethod.GET,
                     "/home/**", "/oauth2/**", "/playlist/{id}",
-                    "/song/{id}", "/user", "/playlist/{id}", "/song/{id}"
+                    "/song/{id}", "/user", "/playlist/{id}", "/song/{id}",
+                    "/files/**"
                     ).permitAll()
                     .pathMatchers(
                         HttpMethod.POST, "/login", "/logout"

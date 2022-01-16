@@ -13,15 +13,21 @@ import com.rxplayer.rxplayer.repositories.PlaylistRepository
 import com.rxplayer.rxplayer.repositories.SongRepository
 import com.rxplayer.rxplayer.util.AuthUtil
 import kotlinx.coroutines.flow.map
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
+import org.springframework.http.codec.multipart.FilePart
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.*
+import java.nio.file.Paths
+import java.util.*
 
 @Component
 class PlayListHandler(
     private val songRepository: SongRepository,
     private val playlistRepository: PlaylistRepository
-    ){
+){
+    @Value("\${rx-player.cover-folder}")
+    private lateinit var coverFolder: String
 
     suspend fun save(serverRequest: ServerRequest): ServerResponse {
         val newPlaylistRequest = serverRequest.awaitBody<SongRequest>()
@@ -49,6 +55,33 @@ class PlayListHandler(
         } ?: ServerResponse.notFound().buildAndAwait()
     }
 
+    suspend fun setCover(serverRequest: ServerRequest): ServerResponse {
+        val id = serverRequest.pathVariable("id")
+        val playlist = playlistRepository.findById(id) ?:
+            return ServerResponse.status(HttpStatus.NOT_FOUND).buildAndAwait()
+
+        val createdBy = playlist.metadata.createdBy
+        if(!AuthUtil.canPerformAction(createdBy)){
+            throw InvalidOperationException("Can not set cover on a playlist you do not own")
+        }
+
+        val partData = serverRequest.awaitMultipartData().toSingleValueMap()
+        val file = partData["file"]!! as FilePart
+
+        val extension = file.filename().split(".").last()
+        val fileId = UUID.randomUUID().toString()
+        file.transferTo(Paths.get("${coverFolder}${fileId}.${extension}"))
+            .subscribe()
+
+        playlist.apply {
+            cover = "http://localhost:8080/files/cover/${fileId}.${extension}"
+        }
+
+        playlistRepository.save(playlist)
+        return ServerResponse.status(HttpStatus.NO_CONTENT)
+            .buildAndAwait()
+    }
+
     suspend fun findSongs(serverRequest: ServerRequest): ServerResponse {
         val id = serverRequest.pathVariable("id")
         val exists = playlistRepository.existsById(id)
@@ -60,7 +93,7 @@ class PlayListHandler(
             .map {
                 val createdBy = it.metadata.createdBy ?: throw IllegalStateException("Song creator user must not be null")
                 val userDto = FindUserDTO(createdBy.id, createdBy.username, createdBy.email, createdBy.profilePicture)
-                FindSongDTO(it.id, it.title, userDto, it.metadata.createdAt)
+                FindSongDTO(it.id, it.title, it.cover, userDto, it.metadata.createdAt)
             }
 
         return ServerResponse.ok().bodyAndAwait(songs)
