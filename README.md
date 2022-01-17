@@ -28,7 +28,7 @@ Requirements:
  - Java 17
  - Docker
  - A Google Cloud Oauth2 client (add credentials on application-local.yml and application-docker.yml)
- - two folders where to store audio files and images (add their names on application-local.yml and application-docker.yml)
+ - two folders where to store audio files and images (add those paths to application-local.yml and application-docker.yml)
 
 With that done, run:
 ```

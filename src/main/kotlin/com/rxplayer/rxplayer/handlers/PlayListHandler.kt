@@ -2,9 +2,9 @@ package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.input.PlaylistActionToSong
 import com.rxplayer.rxplayer.dto.input.SongRequest
-import com.rxplayer.rxplayer.dto.output.find.FindPlaylistDTO
-import com.rxplayer.rxplayer.dto.output.find.FindSongDTO
-import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
+import com.rxplayer.rxplayer.dto.output.find.PlaylistDTO
+import com.rxplayer.rxplayer.dto.output.find.SongDTO
+import com.rxplayer.rxplayer.dto.output.find.UserDTO
 import com.rxplayer.rxplayer.entities.EntityMetadata
 import com.rxplayer.rxplayer.entities.PlayList
 import com.rxplayer.rxplayer.exception.InvalidOperationException
@@ -41,17 +41,23 @@ class PlayListHandler(
         val foundPlaylist = playlistRepository.findById(id)
 
         return foundPlaylist?.let {
-            val creator = it.metadata.createdBy ?: throw NotFoundException("User not found.")
-            val createdDate = it.metadata.createdAt ?: throw IllegalStateException("Null created date.")
+            val createdBy = it.metadata.createdBy ?: throw NotFoundException("User not found.")
 
-            val userDTO = FindUserDTO(
-                creator.id,
-                creator.username,
-                creator.email,
-                creator.profilePicture)
+            val userDTO = UserDTO.builder()
+                .id(createdBy.id)
+                .username(createdBy.username)
+                .email(createdBy.email)
+                .profilePicture(createdBy.profilePicture)
+                .build()
 
-            val dto = FindPlaylistDTO(it.id, it.name, userDTO, createdDate)
-            ServerResponse.ok().bodyValueAndAwait(dto)
+            val playlistDTO = PlaylistDTO.builder()
+                .id(foundPlaylist.id)
+                .name(foundPlaylist.name)
+                .createdBy(userDTO)
+                .createdAt(foundPlaylist.metadata.createdAt)
+                .build()
+
+            ServerResponse.ok().bodyValueAndAwait(playlistDTO)
         } ?: ServerResponse.notFound().buildAndAwait()
     }
 
@@ -92,8 +98,20 @@ class PlayListHandler(
         val songs = songRepository.findAllByContainedInPlaylistsContains(id)
             .map {
                 val createdBy = it.metadata.createdBy ?: throw IllegalStateException("Song creator user must not be null")
-                val userDto = FindUserDTO(createdBy.id, createdBy.username, createdBy.email, createdBy.profilePicture)
-                FindSongDTO(it.id, it.title, it.cover, userDto, it.metadata.createdAt)
+                val userDTO = UserDTO.builder()
+                    .id(createdBy.id)
+                    .username(createdBy.username)
+                    .email(createdBy.email)
+                    .profilePicture(createdBy.profilePicture)
+                    .build()
+
+                SongDTO.builder()
+                    .id(it.id)
+                    .title(it.title)
+                    .cover(it.cover)
+                    .createdBy(userDTO)
+                    .createdAt(it.metadata.createdAt)
+                    .build()
             }
 
         return ServerResponse.ok().bodyAndAwait(songs)

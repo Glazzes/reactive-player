@@ -1,8 +1,8 @@
 package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.output.created.CreatedSongDTO
-import com.rxplayer.rxplayer.dto.output.find.FindSongDTO
-import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
+import com.rxplayer.rxplayer.dto.output.find.SongDTO
+import com.rxplayer.rxplayer.dto.output.find.UserDTO
 import com.rxplayer.rxplayer.entities.EntityMetadata
 import com.rxplayer.rxplayer.entities.Song
 import com.rxplayer.rxplayer.exception.InvalidOperationException
@@ -46,15 +46,23 @@ class SongHandler( private val songRepository: SongRepository ){
         val song = songRepository.findById(songId)
 
         return song?.let {
-            val metadata = song.metadata.createdBy ?: throw IllegalStateException("")
-            val createdBy = FindUserDTO(
-                metadata.id,
-                metadata.username,
-                metadata.email,
-                metadata.profilePicture)
+            val createdBy = song.metadata.createdBy ?: throw IllegalStateException("")
+            val userDto = UserDTO.builder()
+                .id(createdBy.id)
+                .username(createdBy.username)
+                .email(createdBy.email)
+                .profilePicture(createdBy.profilePicture)
+                .build()
 
-            val dto = FindSongDTO(song.id, song.title, song.cover, createdBy, song.metadata.createdAt)
-            ServerResponse.ok().bodyValueAndAwait(dto)
+            val songDto = SongDTO.builder()
+                .id(song.id)
+                .title(song.title)
+                .cover(song.cover)
+                .createdBy(userDto)
+                .createdAt(song.metadata.createdAt)
+                .build()
+
+            ServerResponse.ok().bodyValueAndAwait(songDto)
         } ?: ServerResponse.notFound().buildAndAwait()
     }
 
@@ -66,25 +74,31 @@ class SongHandler( private val songRepository: SongRepository ){
         val song = songRepository.findById(songId) ?:
             return ServerResponse.status(HttpStatus.NOT_FOUND).buildAndAwait()
 
-        val createdBy = song.metadata.createdBy
+        val createdBy = song.metadata.createdBy ?: throw IllegalStateException("")
         if(!AuthUtil.canPerformAction(createdBy)){
             throw InvalidOperationException("You can not delete a song that do not own")
         }
 
         song.apply { title = newTitle }
         val saved = songRepository.save(song)
-        val metadata = song.metadata.createdBy ?: throw IllegalStateException("")
 
-        val creator = FindUserDTO(
-            metadata.id,
-            metadata.username,
-            metadata.email,
-            metadata.profilePicture)
+        val userDTO = UserDTO.builder()
+            .id(createdBy.id)
+            .username(createdBy.username)
+            .email(createdBy.email)
+            .profilePicture(createdBy.profilePicture)
+            .build()
 
-        val dto = FindSongDTO(song.id, song.title, saved.cover, creator, song.metadata.createdAt)
+        val songDTO = SongDTO.builder()
+            .id(saved.id)
+            .title(saved.title)
+            .cover(saved.cover)
+            .createdBy(userDTO)
+            .createdAt(saved.metadata.createdAt)
+            .build()
+
         return ServerResponse.status(HttpStatus.OK)
-            .bodyValueAndAwait(dto)
-
+            .bodyValueAndAwait(songDTO)
     }
 
     suspend fun delete(serverRequest: ServerRequest): ServerResponse {

@@ -1,19 +1,16 @@
 package com.rxplayer.rxplayer.handlers
 
 import com.rxplayer.rxplayer.dto.input.EditUserRequest
-import com.rxplayer.rxplayer.security.SecurityUserAdapter
 import com.rxplayer.rxplayer.dto.input.SignupRequest
 import com.rxplayer.rxplayer.dto.output.created.CreatedUserDTO
-import com.rxplayer.rxplayer.dto.output.find.FindUserDTO
+import com.rxplayer.rxplayer.dto.output.find.UserDTO
 import com.rxplayer.rxplayer.entities.User
 import com.rxplayer.rxplayer.exception.InvalidOperationException
-import com.rxplayer.rxplayer.exception.NotFoundException
 import com.rxplayer.rxplayer.repositories.UserRepository
 import com.rxplayer.rxplayer.util.AuthUtil
 import com.rxplayer.rxplayer.validator.SignUpRequestValidator
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.validation.BeanPropertyBindingResult
@@ -66,14 +63,26 @@ class UserHandler(
         }
 
         val editedUser = userRepository.save(user)
-        val dto = FindUserDTO(editedUser.id, editedUser.username, editedUser.email, editedUser.profilePicture)
+        val dto = UserDTO.builder()
+            .id(editedUser.id)
+            .username(editedUser.username)
+            .email(editedUser.email)
+            .profilePicture(editedUser.profilePicture)
+            .build()
+
         return ServerResponse.status(HttpStatus.OK)
             .bodyValueAndAwait(dto)
     }
 
     suspend fun findMyself(serverRequest: ServerRequest): ServerResponse {
         val user = AuthUtil.getAuthenticatedUserFromRequest(serverRequest)
-        val dto = FindUserDTO(user.id, user.username, user.email, user.profilePicture)
+        val dto = UserDTO.builder()
+            .id(user.id)
+            .username(user.username)
+            .email(user.email)
+            .profilePicture(user.profilePicture)
+            .build()
+
         return ServerResponse.ok().bodyValueAndAwait(dto)
     }
 
@@ -82,7 +91,13 @@ class UserHandler(
         val user = userRepository.findById(id)
 
         return user?.let {
-            val dto = FindUserDTO(it.id, it.username, it.username, it.profilePicture)
+            val dto = UserDTO.builder()
+                .id(user.id)
+                .username(user.username)
+                .email(user.email)
+                .profilePicture(user.profilePicture)
+                .build()
+
             ServerResponse.ok().bodyValueAndAwait(dto)
         } ?: ServerResponse.notFound().buildAndAwait()
     }
