@@ -1,0 +1,25 @@
+rx-player:
+  music-folder: /app/music
+  cover-folder: /app/cover
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            clientId:
+            clientSecret:
+            scope:
+              - profile
+              - email
+  data:
+    mongodb:
+      host: mongo
+      port: 27017
+      database: spring
+
+  servlet:
+    multipart:
+      max-request-size: 200MB
+      max-file-size: 100MB
